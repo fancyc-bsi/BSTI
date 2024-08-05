@@ -277,7 +277,7 @@ class Nessus:
     def add_ip_to_reject_list(self, ip_address):
         log.info("Adding targets to reject list")
         log.info(f"Adding drone IP {ip_address} to the reject list")
-        cmd = f"echo 'reject {ip_address}' | sudo tee -a /opt/nessus/etc/nessus/nessusd.rules"
+        cmd = f"sudo sed -i 's/^default accept/reject {ip_address}\\ndefault accept/' /opt/nessus/etc/nessus/nessusd.rules"
         self.drone.execute(cmd)
 
     def get_drone_ip(self, max_retries=3, retry_delay=5):
@@ -315,10 +315,11 @@ class Nessus:
         try:
             if self.exclude_file:
                 log.info("Adding exclude targets to the reject list")
+                existing_ips = self.get_existing_ips()
                 for exclude_target in self.exclude_file:
                     exclude_target = exclude_target.rstrip()
-                    if exclude_target not in self.added_ips:
-                        cmd = f"echo 'reject {exclude_target}' | sudo tee -a /opt/nessus/etc/nessus/nessusd.rules"
+                    if exclude_target not in self.added_ips and exclude_target not in existing_ips:
+                        cmd = f"sudo sed -i 's/^default accept/reject {exclude_target}\\ndefault accept/' /opt/nessus/etc/nessus/nessusd.rules"
                         self.drone.execute(cmd)
                         self.added_ips.add(exclude_target)
             if self.drone_ip in self.added_ips:
